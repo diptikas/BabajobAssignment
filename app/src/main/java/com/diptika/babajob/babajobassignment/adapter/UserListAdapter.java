@@ -26,8 +26,11 @@ import com.diptika.babajob.babajobassignment.qrgenerator.Contents;
 import com.diptika.babajob.babajobassignment.qrgenerator.QRCodeEncoder;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
+import com.parse.ParseFile;
+import com.parse.ParseObject;
 
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 /**
@@ -138,6 +141,15 @@ public class UserListAdapter extends BaseAdapter {
         try {
             Bitmap bitmap = qrCodeEncoder.encodeAsBitmap();
             qrCode.setImageBitmap(bitmap);
+
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            byte[] byteArray = stream.toByteArray();
+            ParseObject parseObject=new ParseObject("USER QRCODE");
+            ParseFile imgFile = new ParseFile("QRCode", byteArray);
+            imgFile.saveInBackground();
+            parseObject.put("userFile", imgFile);
+            parseObject.saveInBackground();
 
         } catch (WriterException e) {
             e.printStackTrace();
