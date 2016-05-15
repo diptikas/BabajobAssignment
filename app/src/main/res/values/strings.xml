@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">BabajobAssignment</string>
+    <string name="error_name_text">Please Enter Your Name</string>
+    <string name="error_add_text">Please Enter Your Location</string>
+    <string name="error_pin_text">Please Enter Your Age</string>
+    <string name="error_phn_text">Please Enter Your 10 digit Phone Number</string>
+</resources>

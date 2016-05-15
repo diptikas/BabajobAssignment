@@ -1,0 +1,11 @@
+.gradle
+/local.properties
+/.idea/*
+.DS_Store
+/build
+/captures
+BabajobAssignment.iml
+app/app.iml
+gradlew.bat
+/app/build
+BabajobAssignmentGH.iml
