@@ -4,7 +4,9 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Point;
+import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +20,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.diptika.babajob.babajobassignment.ParseApplication;
 import com.diptika.babajob.babajobassignment.R;
 import com.diptika.babajob.babajobassignment.activity.AddNewUserActivity;
 import com.diptika.babajob.babajobassignment.db.UserDataBaseHandler;
@@ -26,8 +29,12 @@ import com.diptika.babajob.babajobassignment.qrgenerator.Contents;
 import com.diptika.babajob.babajobassignment.qrgenerator.QRCodeEncoder;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
+import com.parse.FindCallback;
+import com.parse.GetDataCallback;
+import com.parse.ParseException;
 import com.parse.ParseFile;
 import com.parse.ParseObject;
+import com.parse.ParseQuery;
 
 
 import java.io.ByteArrayOutputStream;
@@ -43,12 +50,15 @@ public class UserListAdapter extends BaseAdapter {
     private int count=0;
     private String day=null;
     private UserDataBaseHandler userDataBaseHandler;
+    private ParseApplication parseApplication;
 
     public UserListAdapter(Activity context, List<UserInfo> userInfoList, String day) {
         mContext = context;
         this.day=day;
         this.userInfoList = userInfoList;
         userDataBaseHandler = new UserDataBaseHandler(mContext);
+        parseApplication = new ParseApplication();
+
     }
 
     @Override
@@ -82,7 +92,7 @@ public class UserListAdapter extends BaseAdapter {
         holder.userAge.setText("Age -"+userInfoList.get(position).getUserAge());
         holder.userLoc.setText("Location - "+userInfoList.get(position).getUserLocation());
         holder.userBloodgroup.setText("BloodGroup - "+userInfoList.get(position).getUserBloodGroup());
-        createQRCode(userInfoList.get(position), holder.qrCode);
+        fetchQrFromServer(userInfoList.get(position), holder.qrCode);
 
         if(day.equals("day1")){
             holder.presentUserCh.setChecked(userInfoList.get(position).getDay1() ==2);
@@ -121,39 +131,34 @@ public class UserListAdapter extends BaseAdapter {
         return convertView;
     }
 
-    private void createQRCode(UserInfo userInfo, ImageView qrCode) {
+    private void fetchQrFromServer(UserInfo userInfo, final ImageView qrCode){
 
-        WindowManager manager = (WindowManager)mContext.getSystemService(mContext.WINDOW_SERVICE);
-        Display display = manager.getDefaultDisplay();
-        Point point = new Point();
-        display.getSize(point);
-        int width = point.x;
-        int height = point.y;
-        int smallerDimension = width < height ? width : height;
-        smallerDimension = smallerDimension * 3/4;
+        ParseQuery<ParseObject> query = ParseQuery.getQuery("QRCODES");
+        query.whereEqualTo("userId",userInfo.getUserID());
 
-        //Encode with a QR Code image
-        QRCodeEncoder qrCodeEncoder = new QRCodeEncoder(userInfo.toString(),
-                null,
-                Contents.Type.TEXT,
-                BarcodeFormat.QR_CODE.toString(),
-                smallerDimension);
-        try {
-            Bitmap bitmap = qrCodeEncoder.encodeAsBitmap();
-            qrCode.setImageBitmap(bitmap);
-
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-            byte[] byteArray = stream.toByteArray();
-            ParseObject parseObject=new ParseObject("USER QRCODE");
-            ParseFile imgFile = new ParseFile("QRCode", byteArray);
-            imgFile.saveInBackground();
-            parseObject.put("userFile", imgFile);
-            parseObject.saveInBackground();
-
-        } catch (WriterException e) {
-            e.printStackTrace();
-        }
+        query.findInBackground(new FindCallback<ParseObject>() {
+            @Override
+            public void done(List<ParseObject> objects, ParseException e) {
+                if (e == null) {
+                    if (objects != null && objects.size() > 0) {
+                        ParseObject parseObject = objects.get(objects.size() - 1);
+                        ParseFile image = (ParseFile) parseObject.get("QRImage");
+                        if (image != null) {
+                            image.getDataInBackground(new GetDataCallback() {
+                                public void done(byte[] data, ParseException e) {
+                                    if (e == null) {
+                                        Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
+                                        qrCode.setImageBitmap(bmp);
+                                    } else {
+                                        Log.d("test", "There was a problem downloading the data.");
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        });
 
     }
 

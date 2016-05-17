@@ -124,6 +124,31 @@ public class UserDataBaseHandler extends SQLiteOpenHelper {
         return userInfo;
     }
 
+    public UserInfo getUserInfoFromUsrNameAndMobile(String userName,String contactNum) {
+        UserInfo userInfo = new UserInfo();
+        String selectQuery = "select  * from  user where name= \""+ userName +"\" and contactNum= \""+contactNum +"\"";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                userInfo.setUserID(cursor.getInt(0));
+                userInfo.setUserName(cursor.getString(1));
+                userInfo.setUserAge(cursor.getInt(2));
+                userInfo.setUserBloodGroup(cursor.getString(3));
+                userInfo.setUserContactNum(cursor.getString(4));
+                userInfo.setUserLocation(cursor.getString(5));
+                userInfo.setDay1(cursor.getInt(6));
+                userInfo.setDay2(cursor.getInt(7));
+                userInfo.setDay3(cursor.getInt(8));
+
+            } while (cursor.moveToNext());
+        }
+        return userInfo;
+    }
+
+
+
     public void updateUserPresent(String dayName, int userId, int count) {
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
         ContentValues values = new ContentValues();

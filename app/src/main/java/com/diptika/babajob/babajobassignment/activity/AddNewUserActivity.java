@@ -1,19 +1,34 @@
 package com.diptika.babajob.babajobassignment.activity;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Point;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.diptika.babajob.babajobassignment.ParseApplication;
 import com.diptika.babajob.babajobassignment.R;
 import com.diptika.babajob.babajobassignment.db.UserDataBaseHandler;
 import com.diptika.babajob.babajobassignment.model.UserInfo;
+import com.diptika.babajob.babajobassignment.qrgenerator.Contents;
+import com.diptika.babajob.babajobassignment.qrgenerator.QRCodeEncoder;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.parse.ParseException;
+import com.parse.ParseFile;
+import com.parse.ParseObject;
+import com.parse.SaveCallback;
+
+import java.io.ByteArrayOutputStream;
 
 /**
  * Created by diptika.s on 5/14/2016.
@@ -136,6 +151,7 @@ public class AddNewUserActivity extends AppCompatActivity {
                     String location = locationEt.getText().toString();
                     Log.d("UserInfo", name + "-" + age + "-" + bloodgroup + "-" + contactno + "-" + location + "-" + count1 + "-" + count2 + "-" + count3);
                     userdatabaseHandler.updateUserInfoFromUsrId(new UserInfo(userId, name, age, bloodgroup, contactno, location, count1, count2, count3));
+                    createAndSaveQRCode(userdatabaseHandler.getUserInfoFromUsrNameAndMobile(name, contactno));
                     Toast.makeText(getApplicationContext(), "User Successfully Saved", Toast.LENGTH_SHORT).show();
                     AddNewUserActivity.this.finish();
                 }
@@ -179,7 +195,8 @@ public class AddNewUserActivity extends AppCompatActivity {
                     String contactno = phoneNumberEt.getText().toString();
                     String location = locationEt.getText().toString();
                     Log.d("UserInfo", name + "-" + age + "-" + bloodgroup + "-" + contactno + "-" + location + "-" + count1 + "-" + count2 + "-" + count3);
-                    userdatabaseHandler.addUser(new UserInfo(name, age, bloodgroup, contactno, location, count1, count2, count3));
+                    userdatabaseHandler.addUser(new UserInfo(userId, name, age, bloodgroup, contactno, location, count1, count2, count3));
+                    createAndSaveQRCode(userdatabaseHandler.getUserInfoFromUsrNameAndMobile(name, contactno));
                     Toast.makeText(getApplicationContext(), "User Successfully Added", Toast.LENGTH_SHORT).show();
                     AddNewUserActivity.this.finish();
 
@@ -188,6 +205,54 @@ public class AddNewUserActivity extends AppCompatActivity {
         });
 
 
+    }
+
+    private void createAndSaveQRCode(UserInfo userInfo) {
+        WindowManager manager = (WindowManager)getSystemService(WINDOW_SERVICE);
+        Display display = manager.getDefaultDisplay();
+        Point point = new Point();
+        display.getSize(point);
+        int width = point.x;
+        int height = point.y;
+        int smallerDimension = width < height ? width : height;
+        smallerDimension = smallerDimension * 3/4;
+
+        QRCodeEncoder qrCodeEncoder = new QRCodeEncoder(userInfo.toString(),
+                null,
+                Contents.Type.TEXT,
+                BarcodeFormat.QR_CODE.toString(),
+                smallerDimension);
+        try {
+            Bitmap bitmap = qrCodeEncoder.encodeAsBitmap();
+
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            byte[] byteArray = stream.toByteArray();
+            ParseApplication parseApplication = new ParseApplication();
+            ParseObject parseObject=new ParseObject("QRCODES");
+            parseObject.put("userId",userInfo.getUserID());
+
+            ParseFile imgFile = new ParseFile("QRCode", byteArray);
+            imgFile.saveInBackground(new SaveCallback() {
+
+                public void done(ParseException e) {
+                    if (e != null) {
+                        Toast.makeText(getApplicationContext(),
+                                "Error saving: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show();
+                    } else {
+                        //filed saved successfully :)
+                    }
+                }
+            });
+            parseObject.put("QRImage", imgFile);
+
+            parseObject.saveInBackground();
+
+
+        } catch (WriterException e) {
+            e.printStackTrace();
+        }
     }
 
 
